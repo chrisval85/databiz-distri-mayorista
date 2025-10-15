@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,22 @@ interface Message {
 }
 
 interface ChatWidgetProps {
-  webhookUrl?: string;
+  webhookUrl: string;
 }
 
-export const ChatWidget = ({ webhookUrl = "" }: ChatWidgetProps) => {
+// Generar UUID v4 para conversationId
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+export const ChatWidget = ({ webhookUrl }: ChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const conversationIdRef = useRef<string>(generateUUID());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -26,6 +37,11 @@ export const ChatWidget = ({ webhookUrl = "" }: ChatWidgetProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Auto scroll al final cuando llegan nuevos mensajes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -35,22 +51,16 @@ export const ChatWidget = ({ webhookUrl = "" }: ChatWidgetProps) => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentMessage = inputValue;
     setInputValue("");
     setIsLoading(true);
 
     try {
-      // Si no hay webhook configurado, usar respuesta de demostración
-      if (!webhookUrl) {
-        setTimeout(() => {
-          const demoResponse: Message = {
-            role: "assistant",
-            content: "Por favor, configure el webhook de N8n para conectar el chat con el sistema de gestión. Contacte al administrador para obtener la URL del webhook.",
-          };
-          setMessages((prev) => [...prev, demoResponse]);
-          setIsLoading(false);
-        }, 1000);
-        return;
-      }
+      console.log("Enviando mensaje a N8n:", {
+        conversationId: conversationIdRef.current,
+        message: currentMessage,
+        type: 4
+      });
 
       const response = await fetch(webhookUrl, {
         method: "POST",
@@ -58,34 +68,36 @@ export const ChatWidget = ({ webhookUrl = "" }: ChatWidgetProps) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: inputValue,
-          timestamp: new Date().toISOString(),
+          conversationId: conversationIdRef.current,
+          message: currentMessage,
+          type: 4
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Error en la respuesta del servidor");
+        throw new Error(`Error HTTP: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log("Respuesta de N8n:", data);
       
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.response || data.message || "Lo siento, no pude procesar tu solicitud.",
+        content: data.message || "Lo siento, no recibí una respuesta válida del servidor.",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error al enviar mensaje:", error);
       toast({
-        title: "Error",
-        description: "No se pudo conectar con el servicio. Por favor, intente nuevamente.",
+        title: "Error de Conexión",
+        description: "No se pudo conectar con el servidor. Por favor, verifique su conexión e intente nuevamente.",
         variant: "destructive",
       });
       
       const errorMessage: Message = {
         role: "assistant",
-        content: "Disculpa, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente o contacta con soporte.",
+        content: "Disculpa, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente más tarde o contacta con soporte.",
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -161,6 +173,7 @@ export const ChatWidget = ({ webhookUrl = "" }: ChatWidgetProps) => {
                   </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}

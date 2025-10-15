@@ -10,8 +10,8 @@ import { ChatWidget } from "@/components/ChatWidget";
 const Index = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // IMPORTANTE: Reemplazar esta URL con la URL del webhook de N8n
-  const N8N_WEBHOOK_URL = "";
+  // Webhook de N8n configurado
+  const N8N_WEBHOOK_URL = "https://chvaldezdatabiz.app.n8n.cloud/webhook/113e9bd7-0cfc-44fc-9164-aa8eedfa2a58";
 
   const handleOpenChat = () => {
     setIsChatOpen(true);
