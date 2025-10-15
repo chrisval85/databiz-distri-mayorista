@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,10 +11,6 @@ interface Message {
   content: string;
 }
 
-interface ChatWidgetProps {
-  webhookUrl: string;
-}
-
 // Generar UUID v4 para conversationId
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -23,7 +20,7 @@ const generateUUID = () => {
   });
 };
 
-export const ChatWidget = ({ webhookUrl }: ChatWidgetProps) => {
+export const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const conversationIdRef = useRef<string>(generateUUID());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -56,30 +53,24 @@ export const ChatWidget = ({ webhookUrl }: ChatWidgetProps) => {
     setIsLoading(true);
 
     try {
-      console.log("Enviando mensaje a N8n:", {
+      console.log("Enviando mensaje:", {
         conversationId: conversationIdRef.current,
         message: currentMessage,
-        type: 4
       });
 
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('n8n-chat-proxy', {
+        body: {
           conversationId: conversationIdRef.current,
           message: currentMessage,
-          type: 4
-        }),
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
+      if (error) {
+        console.error("Error de la función:", error);
+        throw error;
       }
 
-      const data = await response.json();
-      console.log("Respuesta de N8n:", data);
+      console.log("Respuesta recibida:", data);
       
       const assistantMessage: Message = {
         role: "assistant",
