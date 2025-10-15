@@ -1,12 +1,43 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Header } from "@/components/Header";
+import { Hero } from "@/components/Hero";
+import { Categories } from "@/components/Categories";
+import { About } from "@/components/About";
+import { Contact } from "@/components/Contact";
+import { Footer } from "@/components/Footer";
+import { ChatWidget } from "@/components/ChatWidget";
 
 const Index = () => {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // IMPORTANTE: Reemplazar esta URL con la URL del webhook de N8n
+  const N8N_WEBHOOK_URL = "";
+
+  const handleOpenChat = () => {
+    setIsChatOpen(true);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen flex flex-col">
+      <Header onOpenChat={handleOpenChat} />
+      
+      <main className="flex-1">
+        <Hero onOpenChat={handleOpenChat} />
+        
+        <section id="categorias">
+          <Categories />
+        </section>
+        
+        <section id="nosotros">
+          <About />
+        </section>
+        
+        <Contact />
+      </main>
+
+      <Footer />
+      
+      <ChatWidget webhookUrl={N8N_WEBHOOK_URL} />
     </div>
   );
 };
